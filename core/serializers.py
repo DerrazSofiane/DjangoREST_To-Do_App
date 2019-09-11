@@ -3,7 +3,7 @@ from django.core import exceptions
 import django.contrib.auth.password_validation as validators
 from rest_framework import serializers
 
-from core.models import UserProfileModel, TodoGroupModel, TodoModel
+from core.models import UserProfileModel, TodoGroupModel, TodoModel, TodoAttachmentModel
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -13,8 +13,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('first_name', 'last_name', 'username', 'password')
         extra_kwargs = {
-            'first_name': {'blank': False},
-            'last_name': {'blank': False},
+            'first_name': {'allow_blank': False, 'required': True},
+            'last_name': {'allow_blank': False, 'required': True},
             'password': {'write_only': True},
         }
 
@@ -81,48 +81,11 @@ class TodoAttachmentSerializer(serializers.ModelSerializer):
     """The serializer for the todo item attachment model"""
 
     class Meta:
-        model = TodoModel
+        model = TodoAttachmentModel
         fields = ('sort', 'file')
-
-    def validate_sort(self, sort):
-        """validator for sort field"""
-
-        if not self.instance:
-            raise serializers.ValidationError("sort can't be specified before creation")
-        if sort > self.instance.user.todo_groups.count() or sort < 1:
-            raise serializers.ValidationError("invalid sort number")
-        return sort
-
-    def update(self, instance, validated_data):
-        """updates a todo item"""
-
-        instance.file = validated_data.get('file', instance.file)
-
-        if validated_data.get('sort', None):
-            old_sort = instance.sort
-            new_sort = validated_data.get('sort')
-
-            instance.sort = None
-            instance.save()
-
-            if new_sort - old_sort > 0:
-                attachments = instance.todo_item.attachments.filter(sort__gt=old_sort,
-                                                                    sort__lte=new_sort,
-                                                                    sort__isnull=False)
-                for attachment in attachments:
-                    attachment.sort -= 1
-                    attachment.save()
-
-            elif new_sort - old_sort < 0:
-                attachments = instance.todo_item.attachments.filter(sort__lt=old_sort,
-                                                                    sort__gte=new_sort,
-                                                                    sort__isnull=False).order_by('-sort')
-                for attachment in attachments:
-                    attachment.sort += 1
-                    attachment.save()
-
-            instance.sort = new_sort
-            instance.save()
+        extra_kwargs = {
+            'sort': {'read_only': True}
+        }
 
 
 class TodoItemSerializer(serializers.ModelSerializer):
@@ -133,6 +96,9 @@ class TodoItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoModel
         fields = ('sort', 'title', 'status', 'description', 'attachments')
+        extra_kwargs = {
+            'sort': {'required': False}
+        }
 
     def validate_sort(self, sort):
         """validator for sort field"""
@@ -185,6 +151,9 @@ class TodoGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = TodoGroupModel
         fields = ('sort', 'title', 'todos')
+        extra_kwargs = {
+            'sort': {'required': False}
+        }
 
     def validate_sort(self, sort):
         """validator for sort field"""

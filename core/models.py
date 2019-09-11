@@ -53,9 +53,9 @@ class TodoModel(models.Model):
     )
 
     sort = models.PositiveIntegerField(null=True)
-    category = models.OneToOneField(TodoGroupModel, on_delete=models.CASCADE, related_name='todos')
+    category = models.ForeignKey(TodoGroupModel, on_delete=models.CASCADE, related_name='todos')
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True)
     status = models.CharField(max_length=1, choices=todo_statuses, default='U')  # whether it's done or not
 
     class Meta:
