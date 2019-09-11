@@ -6,6 +6,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
 from core.models import UserProfileModel, TodoGroupModel, TodoModel, TodoAttachmentModel
+from core.permissions import UserProfilePermissions, TodoGroupPermissions, TodoPermissions, TodoAttachmentPermissions
 from core.serializers import UserProfileSerializer, TodoGroupSerializer, TodoItemSerializer, TodoAttachmentSerializer
 
 
@@ -43,7 +44,7 @@ class UserProfileView(viewsets.ViewSet):
     Retrieves, creates, Updates and Deletes a User Profile.
     """
 
-    # permission_classes = (UserProfilePermissions,)
+    permission_classes = (UserProfilePermissions,)
     serializer_class = UserProfileSerializer
 
     def retrieve(self, request, username=None):
@@ -158,7 +159,7 @@ class TodoGroupView(viewsets.ViewSet):
     Creates, Updates and Deletes a todo group.
     """
 
-    # permission_classes = (UserAddressPermissions,)
+    permission_classes = (TodoGroupPermissions,)
     serializer_class = TodoGroupSerializer
 
     def create(self, request, username=None):
@@ -233,7 +234,7 @@ class TodoView(viewsets.ViewSet):
     Lists, Creates, Updates and Deletes a todo item.
     """
 
-    # permission_classes = (UserAddressPermissions,)
+    permission_classes = (TodoPermissions,)
     serializer_class = TodoItemSerializer
 
     def list(self, request, username=None):
@@ -396,42 +397,11 @@ class TodoView(viewsets.ViewSet):
 
 class TodoAttachmentView(viewsets.ViewSet):
     """View for the todo attachment.
-    Lists, Creates and Deletes a todo attachment.
+    Creates and Deletes a todo attachment.
     """
 
-    # permission_classes = (UserAddressPermissions,)
+    permission_classes = (TodoAttachmentPermissions,)
     serializer_class = TodoAttachmentSerializer
-
-    def list(self, request, username=None, group_sort=None, item_sort=None):
-        """Lists all todo attachment in a todo item.
-
-        Arguments:
-            request: the request data sent by the user, it is used
-                     to check the user's permissions and in Pagination
-            username: the username of the user profile
-                      whose todo attachments will be returned
-            group_sort: the todo group sort that the todo is in
-            item_sort: the todo item sort that the attachments are in
-        Returns:
-            HTTP 403 Response if the user is
-            not authorized to see that todo's attachments,
-            HTTP 404 if todo is not found,
-            HTTP 200 Response with all todo attachments in JSON.
-        """
-
-        todo_item = get_object_or_404(TodoModel, category__user__account__username=username,
-                                      category__sort=group_sort, sort=item_sort)
-        self.check_object_permissions(request, todo_item)
-        queryset = todo_item.attachments.all()
-
-        paginator = LimitOffsetPagination()
-        paginator.default_limit = 10
-        paginator.max_limit = 100
-        paginated_queryset = paginator.paginate_queryset(queryset, request)
-        serializer = self.serializer_class(paginated_queryset, many=True)
-
-        return Response(data={'limit': paginator.limit, 'offset': paginator.offset,
-                              'count': paginator.count, 'attachments': serializer.data})
 
     def create(self, request, username=None, group_sort=None, item_sort=None):
         """Creates a new todo attachment and adds it to the item's list.
