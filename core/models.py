@@ -71,7 +71,8 @@ class TodoModel(models.Model):
     category = models.ForeignKey(TodoGroupModel, on_delete=models.CASCADE, related_name='todos')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    status = models.CharField(max_length=1, choices=todo_statuses, default='U')  # whether it's done or not
+    status = models.CharField(max_length=1, choices=todo_statuses,
+                              default='U')  # whether it's done or not
 
     class Meta:
         unique_together = ("category", "sort")

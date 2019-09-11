@@ -289,7 +289,8 @@ class TestTodoGroup(TestCase):
         self.assertEqual(response.status_code, 400)
 
         # wrong username
-        url = reverse('core:todo_groups-detail', kwargs={'username': 'non existing username', 'pk': 1})
+        url = reverse('core:todo_groups-detail',
+                      kwargs={'username': 'non existing username', 'pk': 1})
         response = self.client.put(url, {'title': 'title'},
                                    content_type='application/json')
         self.assertEqual(response.status_code, 404)
@@ -330,7 +331,8 @@ class TestTodoGroup(TestCase):
         self.assertEqual(group2.sort, 1)  # resorted from signals
 
         # wrong username
-        url = reverse('core:todo_groups-detail', kwargs={'username': 'non existing username', 'pk': 1})
+        url = reverse('core:todo_groups-detail',
+                      kwargs={'username': 'non existing username', 'pk': 1})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 404)
 
@@ -410,12 +412,14 @@ class TestTodoItem(TestCase):
         self.assertEqual(response.status_code, 404)
 
         # wrong todo pk
-        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1, 'pk': 123})
+        url = reverse('core:todo-detail',
+                      kwargs={'username': 'username', 'group_sort': 1, 'pk': 123})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
         # wrong group sort
-        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1234, 'pk': 1})
+        url = reverse('core:todo-detail',
+                      kwargs={'username': 'username', 'group_sort': 1234, 'pk': 1})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
@@ -450,7 +454,8 @@ class TestTodoItem(TestCase):
         self.assertEqual(response.status_code, 400)
 
         # wrong username
-        url = reverse('core:todo-create', kwargs={'username': 'non existing username', 'group_sort': 1})
+        url = reverse('core:todo-create',
+                      kwargs={'username': 'non existing username', 'group_sort': 1})
         response = self.client.post(url, {'title': 'title'},
                                     content_type='application/json')
         self.assertEqual(response.status_code, 404)
@@ -637,7 +642,8 @@ class TestTodoAttachment(TestCase):
         """test for todo attachment delete view"""
 
         TodoAttachmentModel.objects.create(todo_item=self.todo, file=self.img_upload())
-        attachment2 = TodoAttachmentModel.objects.create(todo_item=self.todo, file=self.img_upload())
+        attachment2 = TodoAttachmentModel.objects.create(
+            todo_item=self.todo, file=self.img_upload())
 
         self.assertEqual(attachment2.sort, 2)
         url = reverse('core:todo_attachments-detail', kwargs={'username': 'username',
