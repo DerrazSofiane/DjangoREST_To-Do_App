@@ -343,22 +343,235 @@ class TestTodoGroup(TestCase):
 class TestTodoItem(TestCase):
     """Unit Test for todo item views"""
 
-    # todo
+    def setUp(self):
+        """setup for unittest"""
+        self.account = User.objects.create_user(username='username', password='password')
+        user_profile = UserProfileModel.objects.create(account=self.account)
+        self.group = TodoGroupModel.objects.create(user=user_profile, title='title')
 
     def test_list(self):
-        pass
+        """Test for todo items list view"""
+
+        TodoModel.objects.create(category=self.group, title='title')
+        url = reverse('core:todo-list', kwargs={'username': 'username'})
+
+        # not logged
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # looged in as a user that has no valid user profile
+        user2 = User.objects.create_user(username='username2', password='password')
+        self.client.force_login(user2)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # not logged in as that user
+        user3 = User.objects.create_user(username='username3', password='password')
+        UserProfileModel.objects.create(account=user3)
+        self.client.force_login(user3)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # right
+        self.client.force_login(self.account)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # wrong username
+        url = reverse('core:todo-list', kwargs={'username': 'non existing username'})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
 
     def test_get(self):
-        pass
+        """Test for todo item get view"""
+
+        TodoModel.objects.create(category=self.group, title='title')
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1, 'pk': 1})
+
+        # not logged
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # not logged in as that user
+        user2 = User.objects.create_user(username='username2', password='password')
+        UserProfileModel.objects.create(account=user2)
+        self.client.force_login(user2)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 403)
+
+        # right
+        self.client.force_login(self.account)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        # wrong username
+        url = reverse('core:todo-detail', kwargs={'username': 'wrong', 'group_sort': 1, 'pk': 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+        # wrong todo pk
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1, 'pk': 123})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+        # wrong group sort
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1234, 'pk': 1})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
 
     def test_create(self):
-        pass
+        """Test for todo item create view"""
+
+        url = reverse('core:todo-create', kwargs={'username': 'username', 'group_sort': 1})
+
+        # not logged
+        response = self.client.post(url, {'title': 'title'},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        # not logged in as that user
+        user2 = User.objects.create_user(username='username2', password='password')
+        UserProfileModel.objects.create(account=user2)
+        self.client.force_login(user2)
+        response = self.client.post(url, {'title': 'title'},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        # right
+        self.client.force_login(self.account)
+        response = self.client.post(url, {'title': 'title'},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(json.loads(response.content)['sort'], 1)  # check for sort from signals
+
+        # wrong data
+        response = self.client.post(url, {},  # missing attrs
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # wrong username
+        url = reverse('core:todo-create', kwargs={'username': 'non existing username', 'group_sort': 1})
+        response = self.client.post(url, {'title': 'title'},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+        # wrong group sort
+        url = reverse('core:todo-create', kwargs={'username': 'username', 'group_sort': 123})
+        response = self.client.post(url, {'title': 'title'},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 404)
 
     def test_update(self):
-        pass
+        """Test for todo item update view"""
+
+        TodoModel.objects.create(category=self.group, title='title')
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1,
+                                                  'pk': 1})
+
+        # not logged
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        # not logged in as that user
+        user2 = User.objects.create_user(username='username2', password='password')
+        UserProfileModel.objects.create(account=user2)
+        self.client.force_login(user2)
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+
+        # right
+        self.client.force_login(self.account)
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        # wrong data for put
+        response = self.client.put(url, {},  # missing attrs
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # wrong data for put (bigger than the count of all todos)
+        response = self.client.patch(url, {'title': 'title', 'sort': 123},
+                                     content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # right for patch
+        response = self.client.patch(url, {'title': 'title'},
+                                     content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+        # wrong data with patch (bigger than the count of all todos)
+        response = self.client.patch(url, {'title': 'title', 'sort': 123},
+                                     content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+
+        # wrong username
+        url = reverse('core:todo-detail', kwargs={'username': 'non existing username', 'group_sort': 1,
+                                                  'pk': 1})
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+        # wrong todo item pk
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1,
+                                                  'pk': 123})
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 404)
+
+        # wrong todo group sort
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 123,
+                                                  'pk': 1})
+        response = self.client.put(url, {'title': 'title'},
+                                   content_type='application/json')
+        self.assertEqual(response.status_code, 404)
 
     def test_delete(self):
-        pass
+        """Test for todo item delete view"""
+
+        TodoModel.objects.create(category=self.group, title='title')
+        todo2 = TodoModel.objects.create(category=self.group, title='title')
+        self.assertEqual(todo2.sort, 2)
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1,
+                                                  'pk': 1})
+
+        # not logged
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 403)
+
+        # not logged in as that user
+        user2 = User.objects.create_user(username='username2', password='password')
+        UserProfileModel.objects.create(account=user2)
+        self.client.force_login(user2)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 403)
+
+        # right
+        self.client.force_login(self.account)
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 204)
+        todo2.refresh_from_db()
+        self.assertEqual(todo2.sort, 1)  # resorted from signals
+
+        # wrong username
+        url = reverse('core:todo-detail', kwargs={'username': 'wrong', 'group_sort': 1,
+                                                  'pk': 1})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 404)
+
+        # wrong todo item pk
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1,
+                                                  'pk': 123})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 404)
+
+        # wrong todo group sort
+        url = reverse('core:todo-detail', kwargs={'username': 'username', 'group_sort': 1234,
+                                                  'pk': 1})
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, 404)
 
 
 class TestTodoAttachment(TestCase):
@@ -378,6 +591,12 @@ class TestTodoAttachment(TestCase):
         return SimpleUploadedFile(name='test_img.jpg',
                                   content=open(file_path, 'rb').read(),
                                   content_type='image/jpg')
+
+    def delete_test_files(self):
+        """deletes generated test files"""
+
+        for attachment in self.todo.attachments.all():
+            attachment.delete()
 
     def test_create(self):
         """test for todo attachment create view"""
@@ -411,6 +630,8 @@ class TestTodoAttachment(TestCase):
                                                             'group_sort': 1, 'item_sort': 1})
         response = self.client.post(url, {'file': self.img_upload()})
         self.assertEqual(response.status_code, 404)
+
+        self.delete_test_files()
 
     def test_delete(self):
         """test for todo attachment delete view"""
@@ -454,3 +675,5 @@ class TestTodoAttachment(TestCase):
                                                               'item_sort': 1, 'pk': 123})
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 404)
+
+        self.delete_test_files()
