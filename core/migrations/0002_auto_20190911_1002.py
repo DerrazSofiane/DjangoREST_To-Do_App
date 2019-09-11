@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
             name='TodoAttachmentModel',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('file', models.FileField(upload_to=core.models.upload)),
+                 ('file', models.FileField(upload_to=core.models.attachment_upload)),
                 ('todo_item', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attachments', to='core.TodoModel')),
             ],
         ),

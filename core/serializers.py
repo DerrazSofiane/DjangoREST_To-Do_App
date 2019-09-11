@@ -105,7 +105,7 @@ class TodoItemSerializer(serializers.ModelSerializer):
 
         if not self.instance:
             raise serializers.ValidationError("sort can't be specified before creation")
-        if sort > self.instance.user.todo_groups.count() or sort < 1:
+        if sort > self.instance.category.todos.count() or sort < 1:
             raise serializers.ValidationError("invalid sort number")
         return sort
 
@@ -141,6 +141,8 @@ class TodoItemSerializer(serializers.ModelSerializer):
 
             instance.sort = new_sort
             instance.save()
+
+        return instance
 
 
 class TodoGroupSerializer(serializers.ModelSerializer):
@@ -194,3 +196,5 @@ class TodoGroupSerializer(serializers.ModelSerializer):
 
             instance.sort = new_sort
             instance.save()
+
+        return instance

@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='userprofilemodel',
             name='profile_photo',
-            field=models.ImageField(null=True, upload_to=core.models.upload),
+            field=models.ImageField(null=True, upload_to=core.models.users_upload),
         ),
         migrations.AlterUniqueTogether(
             name='todoattachmentmodel',
